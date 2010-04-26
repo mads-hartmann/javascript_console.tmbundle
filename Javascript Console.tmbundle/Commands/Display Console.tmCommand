@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>beforeRunningCommand</key>
+	<string>nop</string>
+	<key>command</key>
+	<string>#!/usr/bin/env ruby -wKU
+
+console_css 			= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','%20') + "/console.css"
+console_js 			= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','%20') + "/console.js"
+prettify_packed_js 	= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','%20') + "/prettify.packed.js"
+index_file 			= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','\ ') + "/index.html"
+
+puts "&lt;!DOCTYPE html&gt;"
+puts '&lt;html lang="en"&gt;'
+puts "&lt;head&gt;"
+puts '&lt;meta charset="utf-8" /&gt;'
+puts "&lt;title&gt;JavaScript console - for debugging, presentations and workshops&lt;/title&gt;"
+puts '&lt;meta id="meta" name="viewport" content="width=device-width; user-scalable=no; initial-scale=1.0" /&gt;'
+puts '&lt;link rel="stylesheet" href="file://' +console_css +'" type="text/css" /&gt;'
+puts '&lt;/head&gt;'
+
+puts `cat #{index_file}`
+
+puts '&lt;script src="file://' + prettify_packed_js + '"&gt;&lt;/script&gt;'
+puts '&lt;script src="file://' + console_js + '"&gt;&lt;/script&gt;'
+puts '&lt;/body&gt;'
+puts '&lt;/html&gt;'</string>
+	<key>input</key>
+	<string>selection</string>
+	<key>keyEquivalent</key>
+	<string>@J</string>
+	<key>name</key>
+	<string>Display Console</string>
+	<key>output</key>
+	<string>showAsHTML</string>
+	<key>scope</key>
+	<string>source.js</string>
+	<key>uuid</key>
+	<string>4C0100EB-BA27-4A36-BDD7-2C88648CE02D</string>
+</dict>
+</plist>
