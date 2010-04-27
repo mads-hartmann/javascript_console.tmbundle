@@ -7,10 +7,16 @@
 	<key>command</key>
 	<string>#!/usr/bin/env ruby -wKU
 
-console_css 			= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','%20') + "/console.css"
-console_js 			= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','%20') + "/console.js"
-prettify_packed_js 	= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','%20') + "/prettify.packed.js"
-index_file 			= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','\ ') + "/index.html"
+if ENV['JS_CONSOLE_HOME'] != nil 
+	home = ENV['JS_CONSOLE_HOME']
+else
+	home = ENV['TM_BUNDLE_SUPPORT']
+end
+
+console_css = home.gsub(' ','%20') + "/console.css"
+console_js = home.gsub(' ','%20') + "/console.js"
+prettify_packed_js = home.gsub(' ','%20') + "/prettify.packed.js"
+index_file = ENV['TM_BUNDLE_SUPPORT'].gsub(' ','\ ') + "/index.html"
 selected_text = ENV['TM_SELECTED_TEXT']
 
 puts "&lt;!DOCTYPE html&gt;"
