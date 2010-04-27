@@ -11,6 +11,7 @@ console_css 			= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','%20') + "/console.css"
 console_js 			= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','%20') + "/console.js"
 prettify_packed_js 	= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','%20') + "/prettify.packed.js"
 index_file 			= ENV['TM_BUNDLE_SUPPORT'].gsub(' ','\ ') + "/index.html"
+selected_text = ENV['TM_SELECTED_TEXT']
 
 puts "&lt;!DOCTYPE html&gt;"
 puts '&lt;html lang="en"&gt;'
@@ -25,6 +26,12 @@ puts `cat #{index_file}`
 
 puts '&lt;script src="file://' + prettify_packed_js + '"&gt;&lt;/script&gt;'
 puts '&lt;script src="file://' + console_js + '"&gt;&lt;/script&gt;'
+puts '&lt;script type="text/javascript" charset="utf-8"&gt;'
+if selected_text != nil 
+	puts 'window.postMessage(' + selected_text + ');'
+end
+puts 'document.getElementById("exec").focus();'
+puts '&lt;/script&gt;'
 puts '&lt;/body&gt;'
 puts '&lt;/html&gt;'</string>
 	<key>input</key>
