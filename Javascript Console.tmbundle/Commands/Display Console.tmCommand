@@ -28,7 +28,7 @@ puts '&lt;script src="file://' + prettify_packed_js + '"&gt;&lt;/script&gt;'
 puts '&lt;script src="file://' + console_js + '"&gt;&lt;/script&gt;'
 puts '&lt;script type="text/javascript" charset="utf-8"&gt;'
 if selected_text != nil 
-	puts 'window.postMessage("' + selected_text.gsub('"',"'") + '","tm-internal://local/");'
+	puts 'window.postMessage("' + selected_text.gsub('"',"'").gsub("\n","") + '","tm-internal://local/");'
 end
 puts 'document.getElementById("exec").focus();'
 puts '&lt;/script&gt;'
