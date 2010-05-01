@@ -9,14 +9,14 @@ function stringify(o, simple) {
   } else if (type == '[object Array]') {
     json = '[';
     for (i = 0; i < o.length; i++) {
-      parts.push(stringify(o[i]));
+      parts.push(stringify(o[i], simple));
     }
     json += parts.join(', ') + ']';
     json;
   } else if (type == '[object Object]') {
     json = '{';
     for (i in o) {
-      parts.push(stringify(i) + ': ' + stringify(o[i]));
+      parts.push(stringify(i) + ': ' + stringify(o[i], simple));
     }
     json += parts.join(', ') + '}';
   } else if (type == '[object Number]') {
@@ -46,9 +46,13 @@ function cleanse(s) {
 }
 
 function run(cmd) {
-  var rawoutput = null, className = 'response';
+  var rawoutput = null, 
+      className = 'response',
+      internalCmd = internalCommand(cmd);
 
-  if (!help.test(cmd)) {
+  if (internalCmd) {
+    return ['info', internalCmd];
+  } else {
     try {
       rawoutput = sandboxframe.contentWindow.eval(cmd);
     } catch (e) {
@@ -56,11 +60,7 @@ function run(cmd) {
       className = 'error';
     }
     return [className, cleanse(stringify(rawoutput))];
-  } else {
-    return [className, showhelp()];
-  }
-
-  // return [className, cleanse(stringify(rawoutput))];
+  } 
 }
 
 function post(cmd) {
@@ -79,7 +79,7 @@ function post(cmd) {
   el.className = 'response';
   span.innerHTML = response[1];
 
-  if (!help.test(cmd)) prettyPrint([span]);
+  if (response[0] != 'info') prettyPrint([span]);
   el.appendChild(span);
 
   li.className = response[0];
@@ -89,7 +89,17 @@ function post(cmd) {
   appendLog(li);
     
   output.parentNode.scrollTop = 0;
-  if (!body.className) exec.value = '';
+  if (!body.className) {
+    exec.value = '';
+    if (enableCC) {
+      try {
+        document.querySelector('a').focus();
+        cursor.focus();
+        document.execCommand('selectAll', false, null);
+        document.execCommand('delete', false, null);
+      } catch (e) {}
+    }
+  }
   pos = history.length;
 }
 
@@ -116,6 +126,16 @@ function echo(cmd) {
   appendLog(li, true);
 }
 
+window.info = function(cmd) {
+  var li = document.createElement('li');
+
+  li.className = 'info';
+  li.innerHTML = '<span class="gutter"></span><div>' + cleanse(cmd) + '</div>';
+
+  logAfter = output.querySelectorAll('li.echo')[0] || null;
+  appendLog(li, true);
+}
+
 function appendLog(el, echo) {
   if (echo) {
     if (!output.firstChild) {
@@ -129,20 +149,53 @@ function appendLog(el, echo) {
 }
 
 function changeView(event){
+  if (enableCC) return;
+  
   var which = event.which || event.keyCode;
   if (which == 38 && event.shiftKey == true) {
     body.className = '';
-    exec.focus();
+    cursor.focus();
     return false;
   } else if (which == 40 && event.shiftKey == true) {
     body.className = 'large';
-    exec.focus();
+    cursor.focus();
     return false;
   }
 }
 
+function internalCommand(cmd) {
+  var parts = [];
+  if (cmd.substr(0, 1) == ':') {
+    parts = cmd.substr(1).split(' ');
+    return (commands[parts.shift()] || noop).apply(this, parts);
+  }
+}
+
+function noop() {}
+
 function showhelp() {
-  return 'up/down - cycle history<br />\nshift+up - single line command<br />\nshift+down - multiline command<br />\nshift+enter - to run command in multiline mode';
+  return [
+    'up/down - cycle history',
+    'shift+up - single line command',
+    'shift+down - multiline command', 
+    'shift+enter - to run command in multiline mode',
+    ':load <script_url> - to inject external script'
+  ].join('<br />\n');
+}
+
+function loadScript() {
+  var doc = sandboxframe.contentDocument || sandboxframe.contentWindow.document;
+  for (var i = 0; i < arguments.length; i++) {
+    (function (url) {
+      var script = document.createElement('script');
+      script.src = url
+      script.onload = function () {
+        window.top.info('Loaded ' + url, 'http://' + window.location.hostname);
+      };
+      doc.body.appendChild(script);
+    })(arguments[i]);
+  }
+  return "Loading scripts...";
 }
 
 function checkTab(evt) {
@@ -212,6 +265,108 @@ function trim(s) {
   return (s||"").replace(/^\s+|\s+$/g,"");
 }
 
+var ccCache = {};
+var ccPosition = false;
+
+function getProps(cmd, filter) {
+  var surpress = {}, props = [];
+  
+  if (!ccCache[cmd]) {
+    try {
+      // surpress alert boxes because they'll actually do something when we're looking
+      // up properties inside of the command we're running
+      surpress.alert = sandboxframe.contentWindow.alert;
+      sandboxframe.contentWindow.alert = function () {};
+      
+      // loop through all of the properties available on the command (that's evaled)
+      ccCache[cmd] = sandboxframe.contentWindow.eval('console.props(' + cmd + ')').sort();
+      
+      // return alert back to it's former self
+      delete sandboxframe.contentWindow.alert;
+    } catch (e) {
+      ccCache[cmd] = [];
+    }
+    
+    // if the return value is undefined, then it means there's no props, so we'll 
+    // empty the code completion
+    if (ccCache[cmd][0] == 'undefined') ccOptions[cmd] = [];    
+    ccPosition = 0;
+    props = ccCache[cmd];
+  } else if (filter) {
+    // console.log('>>' + filter, cmd);
+    for (var i = 0, p; i < ccCache[cmd].length, p = ccCache[cmd][i]; i++) {
+      if (p.indexOf(filter) === 0) {
+        if (p != filter) {
+          props.push(p.substr(filter.length, p.length));
+        }
+      }
+    }
+  } else {
+    props = ccCache[cmd];
+  }
+  
+  return props; 
+}
+
+function codeComplete(event) {
+  var cmd = cursor.textContent.split(/[;\s]+/g).pop(),
+      parts = cmd.split('.'),
+      which = whichKey(event),
+      cc,
+      props = [];
+
+  if (cmd) {
+    if (cmd.substr(-1) == '.') {
+      // get the command without the '.' so we can eval it and lookup the properties
+      cmd = cmd.substr(0, cmd.length - 1);
+      
+      props = getProps(cmd);
+    } else {
+      props = getProps(parts.slice(0, parts.length - 1).join('.') || 'window', parts[parts.length - 1]);
+    }
+    
+    if (props.length) {
+      if (which == 9) { // tabbing cycles through the code completion
+        if (event.shiftKey) {
+          // backwards
+          ccPosition = ccPosition == 0 ? props.length - 1 : ccPosition-1;
+        } else {
+          ccPosition = ccPosition == props.length - 1 ? 0 : ccPosition+1;
+        }
+      
+      } else {
+        ccPosition = 0;
+      }
+    
+      // position the code completion next to the cursor
+      if (!cursor.nextSibling) {
+        cc = document.createElement('span');
+        cc.className = 'suggest';
+        exec.appendChild(cc);
+      } 
+
+      cursor.nextSibling.innerHTML = props[ccPosition];
+      exec.value = exec.textContent;
+
+      if (which == 9) return false;
+    } else {
+      ccPosition = false;
+    }
+  } else {
+    ccPosition = false;
+  }
+  
+  if (ccPosition === false && cursor.nextSibling) {
+    removeSuggestion();
+  }
+  
+  exec.value = exec.textContent;
+}
+
+function removeSuggestion() {
+  if (enableCC && cursor.nextSibling) cursor.parentNode.removeChild(cursor.nextSibling);
+}
+
 window._console = {
   log: function () {
     var l = arguments.length, i = 0;
@@ -224,12 +379,28 @@ window._console = {
     for (; i < l; i++) {
       log(stringify(arguments[i]));
     }
+  },
+  props: function (obj) {
+    var props = [], realObj;
+    try {
+      for (var p in obj) props.push(p);
+    } catch (e) {}
+    return props;
   }
 };
 
+document.addEventListener ? 
+  window.addEventListener('message', function (event) {
+    post(event.data);
+  }, false) : 
+  window.attachEvent('onmessage', function () {
+    post(window.event.data);
+  });
+
 var exec = document.getElementById('exec'),
-    form = exec.form,
+    form = exec.form || {},
     output = document.getElementById('output'),
+    cursor = document.getElementById('exec'),
     sandboxframe = document.createElement('iframe'),
     sandbox = null,
     fakeConsole = 'window.top._console',
@@ -238,7 +409,16 @@ var exec = document.getElementById('exec'),
     wide = true,
     body = document.getElementsByTagName('body')[0],
     logAfter = null,
-    help = /^:help$/i;
+    ccTimer = null,
+    commands = { help: showhelp, load: loadScript },
+    // I hate that I'm browser sniffing, but there's issues with Firefox and execCommand so code completion won't work
+    enableCC = navigator.userAgent.indexOf('AppleWebKit') !== -1 && navigator.userAgent.indexOf('Mobile') === -1;
+
+if (enableCC) {
+  exec.parentNode.innerHTML = '<div autofocus id="exec" spellcheck="false"><span id="cursor" contenteditable></span></div>';
+  exec = document.getElementById('exec');
+  cursor = document.getElementById('cursor');
+}
 
 body.appendChild(sandboxframe);
 sandboxframe.setAttribute('id', 'sandbox');
@@ -249,14 +429,29 @@ sandbox.write('<script>(function () { var fakeConsole = ' + fakeConsole + '; if 
 sandbox.close();
 
 // tweaks to interface to allow focus
-if (!('autofocus' in document.createElement('input'))) exec.focus();
+// if (!('autofocus' in document.createElement('input'))) exec.focus();
+cursor.focus();
 output.parentNode.tabIndex = 0;
+
+function whichKey(event) {
+  var keys = {38:1, 40:1, Up:38, Down:40, Enter:10, 'U+0009':9, 'U+0008':8, 'U+0190':190, 'Right':39};
+  return keys[event.keyIdentifier] || event.which || event.keyCode;
+}
+
+exec.onkeyup = function (event) {
+  var which = whichKey(event);
+  clearTimeout(ccTimer);
+  if (enableCC && which != 9 && which != 16) setTimeout(function () {
+    codeComplete(event);
+  }, 200);
+}
 
 exec.onkeydown = function (event) {
   event = event || window.event;
-  var keys = {38:1, 40:1, Up:38, Down:40, Enter:10, 'U+0009':9, 'U+0008':8}, 
+  var keys = {38:1, 40:1}, 
       wide = body.className == 'large', 
-      which = keys[event.keyIdentifier] || event.which || event.keyCode;
+      which = whichKey(event);
+      
   if (typeof which == 'string') which = which.replace(/\/U\+/, '\\u');
   if (keys[which]) {
     if (event.shiftKey) {
@@ -270,27 +465,53 @@ exec.onkeydown = function (event) {
         if (pos >= history.length) pos = 0;
       } 
       if (history[pos] != undefined) {
+        removeSuggestion();
         exec.value = history[pos];
-        // event.preventDefault && event.preventDefault();
+        cursor.focus();
+        if (enableCC) {
+          document.execCommand('selectAll', false, null);
+          document.execCommand('delete', false, null);
+          document.execCommand('insertHTML', false, history[pos]);          
+        }
         return false;
       }
     }
   } else if (which == 13 || which == 10) { // enter (what about the other one)
+    removeSuggestion();
     if (event.shiftKey == true || event.metaKey || event.ctrlKey || !wide) {
-      post(exec.value);
+      post(exec.textContent || exec.value);
       return false;
     }
   } else if (which == 9 && wide) {
     checkTab(event);
   } else if (event.shiftKey && event.metaKey && which == 8) {
     output.innerHTML = '';
+  } else if ((which == 39 || which == 35) && ccPosition !== false) { // complete code
+    var tmp = exec.textContent;
+    removeSuggestion();
+    
+    cursor.innerHTML = tmp;
+    ccPosition = false;
+    
+    // daft hack to move the focus elsewhere, then back on to the cursor to
+    // move the cursor to the end of the text.
+    document.getElementsByTagName('a')[0].focus();
+    cursor.focus();
+  } else if (enableCC) { // try code completion
+    if (ccPosition !== false && which == 9) {
+      codeComplete(event); // cycles available completions
+      return false;
+    } else if (ccPosition !== false && cursor.nextSibling) {
+      removeSuggestion();
+    }
   }
 };
 
 form.onsubmit = function (event) {
   event = event || window.event;
   event.preventDefault && event.preventDefault();
-  post(exec.value);
+  removeSuggestion();
+  post(exec.textContent || exec.value);
   return false;
 };
 
@@ -300,13 +521,17 @@ document.onkeydown = function (event) {
   
   if (event.shiftKey && event.metaKey && which == 8) {
     output.innerHTML = '';
-    exec.focus();
-  } else if (event.target != exec && which == 32) { // space
+    cursor.focus();
+  } else if (event.target == output.parentNode && which == 32) { // space
     output.parentNode.scrollTop += 5 + output.parentNode.offsetHeight * (event.shiftKey ? -1 : 1);
   }
   
   return changeView(event);
 };
+
+exec.onclick = function () {
+  cursor.focus();
+}
 
 if (window.location.search) {
   post(decodeURIComponent(window.location.search.substr(1)));
@@ -315,5 +540,8 @@ if (window.location.search) {
 setTimeout(function () {
   window.scrollTo(0, 1);
 }, 13);
+
+getProps('window'); // cache 
+
 
 })(this);
