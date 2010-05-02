@@ -13,9 +13,9 @@ else
 	home = ENV['TM_BUNDLE_SUPPORT']
 end
 
-console_css = home.gsub(' ','%20') + "/console.css"
-console_js = home.gsub(' ','%20') + "/console.js"
-prettify_packed_js = home.gsub(' ','%20') + "/prettify.packed.js"
+console_css = home.gsub(' ','%20') + "/console/console.css"
+console_js = home.gsub(' ','%20') + "/console/console.js"
+prettify_packed_js = home.gsub(' ','%20') + "/console/prettify.packed.js"
 index_file = ENV['TM_BUNDLE_SUPPORT'].gsub(' ','\ ') + "/index.html"
 selected_text = ENV['TM_SELECTED_TEXT']
 
