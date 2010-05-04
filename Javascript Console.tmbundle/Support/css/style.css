@@ -1,0 +1,23 @@
+body {
+	margin: 0% 10%;
+	background: #e7e7e7;
+}
+
+.content {
+	background: white;
+	padding: 5%;
+	margin: 2% 0%;
+	border:1px solid #515151;
+}
+
+h1 {
+	text-align: center;
+	padding: 10px 0px;
+	text-shadow: 1px 1px 1px #cdcfcf;
+}
+
+h2 { margin-top: 0px;}
+
+.editbtn {
+	float: right;
+}

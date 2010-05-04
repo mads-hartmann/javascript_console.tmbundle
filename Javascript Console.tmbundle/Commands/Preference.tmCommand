@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>beforeRunningCommand</key>
+	<string>nop</string>
+	<key>command</key>
+	<string>#!/usr/bin/env ruby -wKU
+
+require ENV['TM_BUNDLE_SUPPORT'] + '/console_helper.rb'
+
+configuration = SidewaysCoding::JSConsole.load_defaults
+
+puts SidewaysCoding::JSConsole.dependencies
+
+
+puts '&lt;h1&gt;Preference for JS Console&lt;/h1&gt;'
+puts "&lt;div class='content'&gt;"
+puts "&lt;h2&gt;Global preference #{SidewaysCoding::JSConsole.edit_global_file_btn}&lt;/h2&gt;"
+
+puts 'Select entire document as default: &lt;strong&gt;' + configuration['selectDocumentAsDefault'].to_s + '&lt;/strong&gt;&lt;br /&gt;'
+puts 'Prelaod the following files:'
+if configuration['preloadFiles'].empty? == false
+	puts "&lt;br /&gt;"
+	configuration['preloadFiles'].each do |file| puts file + "&lt;br /&gt;" end
+else
+	puts "&lt;strong&gt;No files are being preloaded&lt;/strong&gt;"
+end 
+
+puts '&lt;/div&gt;'
+
+if ENV['TM_PROJECT_DIRECTORY'] != nil 
+	puts "&lt;div class='content'&gt;"
+	puts "&lt;h2&gt;Project preference #{SidewaysCoding::JSConsole.edit_project_file_btn}&lt;/h2&gt;"
+	puts '&lt;br /&gt;'
+	puts '&lt;/div&gt;'	
+end
+</string>
+	<key>input</key>
+	<string>none</string>
+	<key>keyEquivalent</key>
+	<string>@J</string>
+	<key>name</key>
+	<string>Preference</string>
+	<key>output</key>
+	<string>showAsHTML</string>
+	<key>scope</key>
+	<string>source.js</string>
+	<key>uuid</key>
+	<string>98D05BC6-FA3F-4B6B-99E0-A1AE6C7E90D7</string>
+</dict>
+</plist>

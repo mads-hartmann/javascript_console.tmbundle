@@ -7,11 +7,17 @@
 	<key>command</key>
 	<string>#!/usr/bin/env ruby -wKU
 
+require ENV['TM_BUNDLE_SUPPORT'] + '/console_helper.rb'
+
 if ENV['JS_CONSOLE_HOME'] != nil 
 	home = ENV['JS_CONSOLE_HOME']
 else
 	home = ENV['TM_BUNDLE_SUPPORT']
 end
+
+configuration = SidewaysCoding::JSConsole.load_defaults
+
+# ---- header
 
 console_css = home.gsub(' ','%20') + "/console/console.css"
 console_js = home.gsub(' ','%20') + "/console/console.js"
@@ -28,6 +34,8 @@ puts '&lt;meta id="meta" name="viewport" content="width=device-width; user-scala
 puts '&lt;link rel="stylesheet" href="file://' +console_css +'" type="text/css" /&gt;'
 puts '&lt;/head&gt;'
 
+# ---- body 
+
 puts `cat #{index_file}`
 
 puts '&lt;script src="file://' + prettify_packed_js + '"&gt;&lt;/script&gt;'
@@ -35,9 +43,12 @@ puts '&lt;script src="file://' + console_js + '"&gt;&lt;/script&gt;'
 puts '&lt;script type="text/javascript" charset="utf-8"&gt;'
 if selected_text != nil 
 	puts 'window.postMessage("' + selected_text.gsub('"',"'").gsub("\n","") + '","tm-internal://local/");'
+elsif configuration['selectDocumentAsDefault']
+	puts 'window.postMessage(":load file://' + ENV['TM_FILEPATH'] + '","tm-internal://local/");'
 end
 puts 'document.getElementById("exec").focus();'
 puts '&lt;/script&gt;'
+SidewaysCoding::JSConsole.preload_js_dependencies
 puts '&lt;/body&gt;'
 puts '&lt;/html&gt;'</string>
 	<key>input</key>

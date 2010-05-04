@@ -1,0 +1,4 @@
+---
+selectDocumentAsDefault: false # true will import the entire document each time
+#preloadFiles: 
+#  - file:///Developer/jquery/jquery-1.4.2.min.js
