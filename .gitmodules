@@ -1,3 +1,3 @@
-[submodule "Javascript Console.tmbundle/Support/console"]
-	path = Javascript Console.tmbundle/Support/console
+[submodule "Support/console"]
+	path = Support/console
 	url = http://github.com/remy/console.git
