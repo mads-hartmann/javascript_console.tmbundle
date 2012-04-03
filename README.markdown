@@ -6,8 +6,9 @@ To install if follow these instructions
 
     cd ~/Library/Application\ Support/TextMate/Bundles/
     git clone git://github.com/mads379/javascript_console.tmbundle.git
+    cd javascript_console.tmbundle
     git submodule init
-    git submoule update
+    git submodule update
 
 Now you should have a Display Console command available when you're
 editing JavaScript files.
